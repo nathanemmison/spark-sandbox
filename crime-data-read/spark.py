@@ -1,5 +1,6 @@
 import pyspark
 from pyspark.sql import SparkSession
+from pyspark import SparkConf
 import csv
 from io import StringIO
 import logging
@@ -10,7 +11,7 @@ logger = logging.getLogger('price-paid-to-json')
 logger.setLevel(logging.DEBUG)
 
 logger.info("Getting Spark Session and Context")
-spark = SparkSession.builder.master("local[1]") \
+spark = SparkSession.builder.config("spark.driver.extraClassPath", "postgresql-42.2.19.jar").master("local[1]") \
                     .appName('test') \
                     .getOrCreate()
 
@@ -78,13 +79,34 @@ def getCountsViaDF():
 
 	logger.info("Writing crimes count to disk")
 	crime_df.write.csv('crimes')
+
+def importToPG():
+	# Converting to CSV and remove headers
+	logger.info("Converting to CSV and removing headers")
+	content = raw_content.map(convertToCsv)
+
+	# Creates Data Frame, the data is all rows where the second value is not a header, schema is the opposite
+	logger.info("Creating data frame")
+	df = spark.createDataFrame(data = content.filter(lambda x:x[1]!='Month'), schema=content.filter(lambda x:x[1]=='Month').collect()[0])
+
+	df.write.format("jdbc") \
+    .option("url", "jdbc:postgresql://localhost:5432/postgres") \
+    .option("dbtable", "public.crimes") \
+    .option("user", "postgres") \
+    .option("password", "mysecretpassword") \
+    .mode("overwrite") \
+    .save()
+
 	
 logger.info("Spark Sandbox Demo")
 
-logger.info("Running counts via Reduce By Key")
-getCountsViaReduceByKey()
+#logger.info("Running counts via Reduce By Key")
+#getCountsViaReduceByKey()
 
-logger.info("Running counts via Data Frame")
-getCountsViaDF()
+#logger.info("Running counts via Data Frame")
+#getCountsViaDF()
+
+logger.info("Import into Postgres")
+importToPG()
 
 sc.stop()
