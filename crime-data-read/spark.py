@@ -17,14 +17,15 @@ spark = SparkSession.builder.config("spark.driver.extraClassPath", "postgresql-4
 
 sc = spark.sparkContext
 
-# Reading CSV files from local drive, removed for Git
-# Uses data from https://data.police.uk/data/
-logger.info("Reading local files")
-raw_content = sc.textFile("data/*/*.csv")
+def readLocal():
+	# Reading CSV files from local drive, removed for Git
+	# Uses data from https://data.police.uk/data/
+	logger.info("Reading local files")
+	global raw_content = sc.textFile("data/*/*.csv")
 
-# Getting Count
-logger.info("Count of raw data")
-print(raw_content.count())
+	# Getting Count
+	logger.info("Count of raw data")
+	print(raw_content.count())
 
 # Custom Function to generate a clean CSV line
 def convertToCsv(x):
@@ -99,6 +100,9 @@ def importToPG():
 
 	
 logger.info("Spark Sandbox Demo")
+
+logger.info("Getting Data")
+readLocal()
 
 #logger.info("Running counts via Reduce By Key")
 #getCountsViaReduceByKey()
