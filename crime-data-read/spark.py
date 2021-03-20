@@ -4,14 +4,27 @@ from pyspark import SparkConf
 import csv
 from io import StringIO
 import logging
+import os
 
 # Setting up logger format
 logging.basicConfig(format='%(asctime)s\t%(levelname)s\t%(message)s', datefmt='%d-%b-%y %H:%M:%S')
 logger = logging.getLogger('price-paid-to-json')
 logger.setLevel(logging.DEBUG)
 
+# Download Artifacts
+conf = SparkConf()
+conf.set('spark.jars.packages', 'org.apache.hadoop:hadoop-aws:3.2.0')
+conf.set('spark.hadoop.fs.s3a.access.key', 'foobar')
+conf.set('spark.hadoop.fs.s3a.secret.key', 'foobar')
+conf.set('spark.hadoop.fs.s3a.endpoint', 'localhost:4566')
+conf.set("spark.hadoop.fs.s3a.connection.ssl.enabled", "false")
+conf.set("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+conf.set("spark.hadoop.fs.s3a.path.style.access", "true")
+
 logger.info("Getting Spark Session and Context")
-spark = SparkSession.builder.config("spark.driver.extraClassPath", "postgresql-42.2.19.jar").master("local[1]") \
+spark = SparkSession.builder.config("spark.driver.extraClassPath", "postgresql-42.2.19.jar") \
+					.config(conf=conf) \
+					.master("local[1]") \
                     .appName('test') \
                     .getOrCreate()
 
@@ -21,13 +34,21 @@ def readLocal():
 	# Reading CSV files from local drive, removed for Git
 	# Uses data from https://data.police.uk/data/
 	logger.info("Reading local files")
-	global raw_content = sc.textFile("data/*/*.csv")
+	global raw_content 
+	raw_content = sc.textFile("data/*/*.csv")
 
 	# Getting Count
 	logger.info("Count of raw data")
 	print(raw_content.count())
 
-# Custom Function to generate a clean CSV line
+def readS3():
+	global raw_content 
+	raw_content = sc.textFile('s3a://crime-data/*/*.csv')
+
+	# Getting Count
+	logger.info("Count of raw data")
+	print(raw_content.count())
+
 def convertToCsv(x):
 
 	data = StringIO(x)
@@ -102,15 +123,16 @@ def importToPG():
 logger.info("Spark Sandbox Demo")
 
 logger.info("Getting Data")
-readLocal()
+#readLocal()
+readS3()
 
 #logger.info("Running counts via Reduce By Key")
 #getCountsViaReduceByKey()
 
-#logger.info("Running counts via Data Frame")
-#getCountsViaDF()
+logger.info("Running counts via Data Frame")
+getCountsViaDF()
 
-logger.info("Import into Postgres")
-importToPG()
+#logger.info("Import into Postgres")
+#importToPG()
 
 sc.stop()
