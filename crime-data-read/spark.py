@@ -8,7 +8,7 @@ import os
 
 # Setting up logger format
 logging.basicConfig(format='%(asctime)s\t%(levelname)s\t%(message)s', datefmt='%d-%b-%y %H:%M:%S')
-logger = logging.getLogger('price-paid-to-json')
+logger = logging.getLogger('spark-sandbox')
 logger.setLevel(logging.DEBUG)
 
 # Download Artifacts
